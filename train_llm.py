@@ -1,6 +1,6 @@
 """
-Fine-tuning the library models for causal language modeling (GPT, GPT-2, CTRL, ...)
-on a text file or a dataset without using HuggingFace Trainer.
+Fine-tuning the Language Model (LLM) specifically designed for condensing Project Design Document (PDD) .pdf files 
+and predicting carbon credit issuance trends.
 
 """
 # You can also adapt this script on your own causal language modeling task. Pointers for this are left as comments.
@@ -40,7 +40,39 @@ require_version(
 )
 
 class Trainer:
+    """
+        Initializes the Trainer class for a Language Model (LLM) finetuning.
+
+        This LLM aims to simplify the evaluation of PDDs by condensing extensive documents into 
+        accessible tabular formats and providing predictions on annual carbon credit allotments. 
+        The model facilitates easy interaction and dynamic updating with real-time project information, 
+        enhancing the efficiency and accuracy of project evaluation.
+
+        Args:
+            args (DictConfig): An argparse.DictConfig object containing all training configurations. Expected attributes:
+                - model_name_or_path (str): Path or identifier for the pretrained model.
+                - with_tracking (bool): Flag to enable tracking of the training process.
+                - report_to (str): Destination to report training logs.
+                - output_dir (str): Directory for saving output files and checkpoints.
+                - gradient_accumulation_steps (int): Number of gradient accumulation steps.
+                - seed (Optional[int]): Seed for random number generators for reproducibility.
+                - weight_decay (float): Weight decay parameter for the optimizer.
+                - learning_rate (float): Learning rate for the optimizer.
+                - max_train_steps (Optional[int]): Maximum number of training steps.
+                - num_train_epochs (int): Number of training epochs.
+                - per_device_train_batch_size (int): Batch size per training device.
+                - checkpointing_steps (Union[int, str]): Interval for saving checkpoints.
+                - resume_from_checkpoint (Optional[str]): Path to resume training from a checkpoint.
+                - low_cpu_mem_usage (bool): Flag to optimize model for low CPU memory usage.
+                - trust_remote_code (bool): Whether to trust and execute remote code in custom models.
+                - use_slow_tokenizer (bool): Flag to use a slower but more customizable tokenizer.
+                - lr_scheduler_type (str): Type of learning rate scheduler.
+                - num_warmup_steps (int): Number of warm-up steps for the scheduler.
+                - max_grad_norm (float): Maximum norm for gradient clipping.
+                - checkpoints_total_limit (Optional[int]): Maximum number of checkpoints to retain.
+    """
     def __init__(self, args):
+        """Constructor"""
         # Sending telemetry. Tracking the example usage helps us better allocate resources to maintain them. The
         # information sent is the one passed as arguments along with your Python/PyTorch versions.
         send_example_telemetry("run_clm_no_trainer", args)
@@ -225,6 +257,17 @@ class Trainer:
         self.args = args
 
     def train(self):
+        """
+        Executes the training process for the causal language modeling task.
+
+        This method handles:
+        - Loading model and optimizer states from a checkpoint if specified.
+        - Iterating over the training data for the specified number of epochs.
+        - Calculating loss and performing backpropagation.
+        - Updating model parameters and learning rate scheduler.
+        - Performing checkpointing based on specified intervals.
+        - Logging training progress and metrics.
+        """
         # Potentially load in the weights and states from a previous save
         if self.args.resume_from_checkpoint:
             if (

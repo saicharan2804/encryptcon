@@ -1,0 +1,20 @@
+site_name: PDD-LLM
+site_description: PDD-LLM, one-stop insights on green finance trends
+repo_url: >
+  https://github.com/saicharan2804/encryptcon.git
+repo_name: >
+  'AZ-AI/DiffusionHarm'
+
+markdown_extensions:
+  - admonition
+
+nav:
+  - Overview: README.md
+  - Modules: 
+    - trainers/llm_trainer.md
+    - trainers/vae_trainer.md
+
+theme: readthedocs
+
+plugins:
+  - mkdocstrings
