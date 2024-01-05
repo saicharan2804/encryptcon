@@ -1,49 +1,76 @@
-from torch.utils.data import IterableDataset
-from datasets import load_dataset
-from PIL import Image
-import io
+from transformers import DonutProcessor, VisionEncoderDecoderModel
+from torch.utils.data import Dataset, DataLoader
+from utils import *
+import pandas as pd
+import os
 
+def load_and_preprocess_csv(csv_path):
+    # Load CSV
+    df = pd.read_csv(csv_path)
 
-class CustomDataset(IterableDataset):
-    def __init__(
-        self, dataset_name, split, feature_extractor, samples_per_class, subset="train"
-    ):
-        self.dataset_name = dataset_name
-        self.split = split
-        self.feature_extractor = feature_extractor
-        self.samples_per_class = samples_per_class
-        self.subset = subset
-        self.samples_collected = {label: 0 for label in range(num_labels)}
-        self.dataset_stream = self.create_stream()
+    # Drop specified columns
+    # columns_to_drop = ['Unnamed: 0', 'ARB Project', 'State', 'Project Site Location',
+    #                    'Reversals Covered by Buffer Pool', 'Reversals Not Covered by Buffer']
+    # df.drop(columns=columns_to_drop, inplace=True, errors='ignore')
 
-    def create_stream(self):
-        return load_dataset(self.dataset_name, split=self.split, streaming=True)
+    # Merge specified columns into arrays
+    vintage_issue_cols = [str(year) + '.0' for year in range(2009, 2024)]
+    retired_credits_cols = [str(year) + '.0.1' for year in range(2009, 2024)]
 
-    def reset_stream(self):
-        self.dataset_stream = self.create_stream()
-        self.samples_collected = {label: 0 for label in range(num_labels)}
+    df['vintage_issue'] = df[vintage_issue_cols].values.tolist()
+    df['retired_credits'] = df[retired_credits_cols].values.tolist()
 
-    def preprocess(self, example):
-        if isinstance(example["image"], bytes):
-            image = Image.open(io.BytesIO(example["image"]))
-        else:
-            image = example["image"]
-        if image.mode != "RGB":
-            image = image.convert("RGB")
+    # Drop the original year columns
+    df.drop(columns=vintage_issue_cols + retired_credits_cols, inplace=True, errors='ignore')
 
-        pixel_values = self.feature_extractor(
-            images=image, return_tensors="pt"
-        ).pixel_values.squeeze()
-        return pixel_values, example["label"]
+    return df
 
-    def __iter__(self):
-        for example in self.dataset_stream:
-            label = example["label"]
-            if self.samples_collected[label] < self.samples_per_class:
-                self.samples_collected[label] += 1
-                yield self.preprocess(example)
-            if all(
-                value == self.samples_per_class
-                for value in self.samples_collected.values()
-            ):
-                break
+# Custom Dataset
+class PDFDocumentDataset(Dataset):
+    def __init__(self, csv_path, pdf_folder_path, processor, model):
+        self.pdf_folder_path = pdf_folder_path
+        self.processor = processor
+        self.model = model
+        self.dataframe = self.check_data(load_and_preprocess_csv(csv_path))
+
+    def check_data(self, dataframe):
+
+        df2 = []
+
+        for _, row in dataframe.iterrows():
+            pdf_path = f"{self.pdf_folder_path}/{row['Project ID']}.pdf"
+            if os.path.exists(pdf_path):
+                df2.append(row)
+
+        return df2
+
+    def __len__(self):
+        return len(self.dataframe)
+
+    def __getitem__(self, idx):
+        row = self.dataframe[idx]
+        pdf_path = f"{self.pdf_folder_path}/{row['Project ID']}.pdf"
+        embeddings = get_concatenated_representation(pdf_path, self.processor, self.model)
+
+        # Create a comma-separated text from the row, excluding embeddings-related data
+        text_data = row.drop(['Project ID', 'vintage_issue', 'retired_credits']).to_csv(header=False, index=False).strip('\n')
+
+        # Prepare the output dictionary
+        return {
+            "project_id": row['Project ID'],
+            "description": text_data,
+            "vintage_issue": row['vintage_issue'],
+            "retired_credits": row['retired_credits'],
+            "embeddings": embeddings
+        }
+    
+if __name__ == '__main__':
+
+    # Initialize the processor and model
+    processor = DonutProcessor.from_pretrained("naver-clova-ix/donut-base-finetuned-cord-v2")
+    model = VisionEncoderDecoderModel.from_pretrained("naver-clova-ix/donut-base-finetuned-cord-v2")
+    model.to("cuda" if torch.cuda.is_available() else "cpu")
+    pass
+
+    dset = PDFDocumentDataset("clean_data.csv", "dataset", processor, model)
+    print(dset[0])

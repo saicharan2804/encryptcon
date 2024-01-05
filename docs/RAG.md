@@ -1,0 +1,3 @@
+# Retrival Augmented Generation
+
+::: rag

@@ -13,6 +13,8 @@ nav:
   - Modules: 
     - trainers/llm_trainer.md
     - trainers/vae_trainer.md
+  - RAG: 
+    - RAG.md
 
 theme: readthedocs
 

@@ -1,4 +1,20 @@
 import torch
+from pdf2image import convert_from_path
+
+# Function to convert a PDF file to images
+def convert_pdf_to_images(pdf_path):
+    return convert_from_path(pdf_path)
+
+# Function to get concatenated representation of a document
+@torch.no_grad()
+def get_concatenated_representation(pdf_path, processor, model):
+    image_array = convert_pdf_to_images(pdf_path)
+    concatenated_outputs = []
+    for image in image_array:
+        pixel_values = processor(image, return_tensors="pt").pixel_values.to(model.device)
+        outputs = model.encoder(pixel_values)
+        concatenated_outputs.append(outputs.pooler_output)
+    return torch.cat(concatenated_outputs, dim=1)
 
 
 def shift_tokens_right(
