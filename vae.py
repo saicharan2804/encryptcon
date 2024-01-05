@@ -19,6 +19,8 @@ class VAE(nn.Module):
         if hidden_dims is None:
             hidden_dims = [32, 64, 128, 256, 512]
 
+        self.in_conv = nn.Sequential(nn.Conv1d(2, 1, 1), nn.ReLU(), nn.Conv1d(1, 1, 1))
+
         # Build Encoder
         for h_dim in hidden_dims:
             modules.append(
@@ -57,6 +59,8 @@ class VAE(nn.Module):
                             nn.BatchNorm1d(hidden_dims[-1]),
                             nn.LeakyReLU(),
                             nn.Linear(hidden_dims[-1], out_channels=in_channels))
+        
+        self.out_conv = nn.Sequential(nn.Conv1d(1, 2, 1), nn.ReLU(), nn.Conv1d(2, 2, 1))
 
     def encode(self, input: torch.Tensor) -> List[torch.Tensor]:
         """
@@ -65,6 +69,7 @@ class VAE(nn.Module):
         :param input: (Tensor) Input tensor to encoder [N x C x H x W]
         :return: (Tensor) List of latent codes
         """
+        input = self.in_conv(input)
         result = self.encoder(input)
         result = torch.flatten(result, start_dim=1)
 
@@ -86,6 +91,7 @@ class VAE(nn.Module):
         result = result.view(-1, 512, 2, 2)
         result = self.decoder(result)
         result = self.final_layer(result)
+        result = self.out_conv(result)
         return result
 
     def reparameterize(self, mu: torch.Tensor, logvar: torch.Tensor) -> torch.Tensor:
@@ -103,7 +109,7 @@ class VAE(nn.Module):
     def forward(self, input: torch.Tensor,) -> List[torch.Tensor]:
         mu, log_var = self.encode(input)
         z = self.reparameterize(mu, log_var)
-        return  [self.decode(z), input, mu, log_var]
+        return  [self.decode(z), mu, log_var]
 
     def loss_function(self,
                       recons, 
@@ -120,7 +126,6 @@ class VAE(nn.Module):
         """
 
         recons_loss = F.mse_loss(recons, y)
-
 
         kld_loss = torch.mean(-0.5 * torch.sum(1 + log_var - mu ** 2 - log_var.exp(), dim = 1), dim = 0)
 
