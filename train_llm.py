@@ -127,8 +127,6 @@ class Trainer:
 
         self.tokenizer = DonutProcessor.from_pretrained(
             args.model_name_or_path,
-            use_fast=not args.use_slow_tokenizer,
-            trust_remote_code=args.trust_remote_code,
         )
 
         model = VisionEncoderDecoderModel.from_pretrained(
@@ -138,8 +136,8 @@ class Trainer:
             trust_remote_code=args.trust_remote_code,
         )
 
-        processor = DonutProcessor.from_pretrained(args.model_name)
-        model = VisionEncoderDecoderModel.from_pretrained(args.model_name)
+        processor = DonutProcessor.from_pretrained(args.model_name_or_path)
+        model = VisionEncoderDecoderModel.from_pretrained(args.model_name_or_path)
         model.to(self.accelerator.device)
 
         train_dataset = PDFDocumentDataset(**args.data_kwargs, processor = processor, model = model)
@@ -227,10 +225,7 @@ class Trainer:
         # The trackers initializes automatically on the main process.
         if args.with_tracking:
             experiment_config = vars(args)
-            # TensorBoard cannot log Enums, need the raw value
-            experiment_config["lr_scheduler_type"] = experiment_config[
-                "lr_scheduler_type"
-            ].value
+
             self.accelerator.init_trackers("clm_no_trainer", experiment_config)
 
         # Train!
@@ -258,8 +253,6 @@ class Trainer:
             range(args.max_train_steps),
             disable=not self.accelerator.is_local_main_process,
         )
-        self.completed_steps = 0
-        self.starting_epoch = 0
 
         self.args = args
 
@@ -275,6 +268,9 @@ class Trainer:
         - Performing checkpointing based on specified intervals.
         - Logging training progress and metrics.
         """
+
+        completed_steps = 0
+        starting_epoch = 0
         # Potentially load in the weights and states from a previous save
         if self.args.resume_from_checkpoint:
             if (

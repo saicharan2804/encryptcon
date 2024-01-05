@@ -1,11 +1,11 @@
 mode : llm
 
-per_device_train_batch_size: 8
+per_device_train_batch_size: 1
 learning_rate: 5e-5
 weight_decay: 0.0
 num_train_epochs: 3
 max_train_steps: null
-gradient_accumulation_steps: 4
+gradient_accumulation_steps: 1
 lr_scheduler_type: "linear"
 num_warmup_steps: 0
 output_dir: "runs"
@@ -20,10 +20,10 @@ hub_token: null
 trust_remote_code: false
 checkpointing_steps: null
 resume_from_checkpoint: null
-with_tracking: true
+with_tracking: false
 report_to: "wandb"
 low_cpu_mem_usage: false
-model_name : naver-clova-ix/donut-base-finetuned-cord-v2
+model_name_or_path : naver-clova-ix/donut-base-finetuned-cord-v2
 data_kwargs:
   csv_path : clean_data.csv
   pdf_folder_path : dataset
