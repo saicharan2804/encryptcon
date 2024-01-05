@@ -53,16 +53,27 @@ class PDFDocumentDataset(Dataset):
         embeddings = get_concatenated_representation(pdf_path, self.processor, self.model)
 
         # Create a comma-separated text from the row, excluding embeddings-related data
-        text_data = row.drop(['Project ID', 'vintage_issue', 'retired_credits']).to_csv(header=False, index=False).strip('\n')
+        text_data = '\n'.join([f"{k}:{v}" for k,v in row.drop(['Project ID', 'vintage_issue', 'retired_credits']).to_dict().items()])#.to_csv(header=False, index=False).strip('\n')
 
-        # Prepare the output dictionary
-        return {
+        data = {
             "project_id": row['Project ID'],
             "description": text_data,
             "vintage_issue": row['vintage_issue'],
             "retired_credits": row['retired_credits'],
             "embeddings": embeddings
         }
+
+        text = ""
+        for k,v in data.items():
+            if k!= 'embeddings':
+                text += f"{k} : {v},"
+
+        labels, attn_mask = self.processor.tokenizer(text, padding = "max_length", max_length = 1024, add_special_tokens=False, return_tensors="pt")
+
+        data["labels"] = labels
+        data["attn_mask"] = attn_mask
+        # Prepare the output dictionary
+        return data
     
 if __name__ == '__main__':
 
