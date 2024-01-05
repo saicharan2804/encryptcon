@@ -4,11 +4,13 @@ import pandas as pd
 from typing import List
 import os
 
+
 # Function to convert a PDF file to images
 def convert_pdf_to_images(pdf_path):
     return convert_from_path(pdf_path)
 
-def load_and_preprocess_csv(csv_path : str) -> pd.DataFrame:
+
+def load_and_preprocess_csv(csv_path: str) -> pd.DataFrame:
     """
     Load and preprocess the CSV file containing the metadata for PDF documents.
 
@@ -32,36 +34,39 @@ def load_and_preprocess_csv(csv_path : str) -> pd.DataFrame:
     # df.drop(columns=columns_to_drop, inplace=True, errors='ignore')
 
     # Merge specified columns into arrays
-    vintage_issue_cols = [str(year) + '.0' for year in range(2009, 2024)]
-    retired_credits_cols = [str(year) + '.0.1' for year in range(2009, 2024)]
+    vintage_issue_cols = [str(year) + ".0" for year in range(2009, 2024)]
+    retired_credits_cols = [str(year) + ".0.1" for year in range(2009, 2024)]
 
-    df['vintage_issue'] = df[vintage_issue_cols].values.tolist()
-    df['retired_credits'] = df[retired_credits_cols].values.tolist()
+    df["vintage_issue"] = df[vintage_issue_cols].values.tolist()
+    df["retired_credits"] = df[retired_credits_cols].values.tolist()
 
     # Drop the original year columns
-    df.drop(columns=vintage_issue_cols + retired_credits_cols, inplace=True, errors='ignore')
+    df.drop(
+        columns=vintage_issue_cols + retired_credits_cols, inplace=True, errors="ignore"
+    )
 
     return check_data(df)
 
-def check_data(self, dataframe : pd.DataFrame) -> List[pd.DataFrame]:
-        """
-        Validate and filter the DataFrame based on the existence of corresponding PDF files.
 
-        Args:
-        dataframe (DataFrame): The preprocessed DataFrame.
+def check_data(self, dataframe: pd.DataFrame) -> List[pd.DataFrame]:
+    """
+    Validate and filter the DataFrame based on the existence of corresponding PDF files.
 
-        Returns:
-        list: A filtered list of DataFrame rows where the PDF files exist.
-        """
-        df2 = []
+    Args:
+    dataframe (DataFrame): The preprocessed DataFrame.
 
-        # Check for the existence of each PDF and append the row to df2 if the PDF exists
-        for _, row in dataframe.iterrows():
-            pdf_path = f"{self.pdf_folder_path}/{row['Project ID']}.pdf"
-            if os.path.exists(pdf_path):
-                df2.append(row)
+    Returns:
+    list: A filtered list of DataFrame rows where the PDF files exist.
+    """
+    df2 = []
 
-        return df2
+    # Check for the existence of each PDF and append the row to df2 if the PDF exists
+    for _, row in dataframe.iterrows():
+        pdf_path = f"{self.pdf_folder_path}/{row['Project ID']}.pdf"
+        if os.path.exists(pdf_path):
+            df2.append(row)
+
+    return df2
 
 
 # Function to get concatenated representation of a document
@@ -70,7 +75,9 @@ def get_concatenated_representation(pdf_path, processor, model):
     image_array = convert_pdf_to_images(pdf_path)
     concatenated_outputs = []
     for image in image_array:
-        pixel_values = processor(image, return_tensors="pt").pixel_values.to(model.device)
+        pixel_values = processor(image, return_tensors="pt").pixel_values.to(
+            model.device
+        )
         outputs = model.encoder(pixel_values)
         concatenated_outputs.append(outputs.pooler_output)
     return torch.cat(concatenated_outputs, dim=1)

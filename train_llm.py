@@ -40,38 +40,40 @@ require_version(
     "To fix: pip install -r examples/pytorch/language-modeling/requirements.txt",
 )
 
+
 class Trainer:
     """
-        Initializes the Trainer class for a Language Model (LLM) finetuning.
+    Initializes the Trainer class for a Language Model (LLM) finetuning.
 
-        This LLM aims to simplify the evaluation of PDDs by condensing extensive documents into 
-        accessible tabular formats and providing predictions on annual carbon credit allotments. 
-        The model facilitates easy interaction and dynamic updating with real-time project information, 
-        enhancing the efficiency and accuracy of project evaluation.
+    This LLM aims to simplify the evaluation of PDDs by condensing extensive documents into
+    accessible tabular formats and providing predictions on annual carbon credit allotments.
+    The model facilitates easy interaction and dynamic updating with real-time project information,
+    enhancing the efficiency and accuracy of project evaluation.
 
-        Args:
-            args (DictConfig): An argparse.DictConfig object containing all training configurations. Expected attributes:
-                - model_name_or_path (str): Path or identifier for the pretrained model.
-                - with_tracking (bool): Flag to enable tracking of the training process.
-                - report_to (str): Destination to report training logs.
-                - output_dir (str): Directory for saving output files and checkpoints.
-                - gradient_accumulation_steps (int): Number of gradient accumulation steps.
-                - seed (Optional[int]): Seed for random number generators for reproducibility.
-                - weight_decay (float): Weight decay parameter for the optimizer.
-                - learning_rate (float): Learning rate for the optimizer.
-                - max_train_steps (Optional[int]): Maximum number of training steps.
-                - num_train_epochs (int): Number of training epochs.
-                - per_device_train_batch_size (int): Batch size per training device.
-                - checkpointing_steps (Union[int, str]): Interval for saving checkpoints.
-                - resume_from_checkpoint (Optional[str]): Path to resume training from a checkpoint.
-                - low_cpu_mem_usage (bool): Flag to optimize model for low CPU memory usage.
-                - trust_remote_code (bool): Whether to trust and execute remote code in custom models.
-                - use_slow_tokenizer (bool): Flag to use a slower but more customizable tokenizer.
-                - lr_scheduler_type (str): Type of learning rate scheduler.
-                - num_warmup_steps (int): Number of warm-up steps for the scheduler.
-                - max_grad_norm (float): Maximum norm for gradient clipping.
-                - checkpoints_total_limit (Optional[int]): Maximum number of checkpoints to retain.
+    Args:
+        args (DictConfig): An argparse.DictConfig object containing all training configurations. Expected attributes:
+            - model_name_or_path (str): Path or identifier for the pretrained model.
+            - with_tracking (bool): Flag to enable tracking of the training process.
+            - report_to (str): Destination to report training logs.
+            - output_dir (str): Directory for saving output files and checkpoints.
+            - gradient_accumulation_steps (int): Number of gradient accumulation steps.
+            - seed (Optional[int]): Seed for random number generators for reproducibility.
+            - weight_decay (float): Weight decay parameter for the optimizer.
+            - learning_rate (float): Learning rate for the optimizer.
+            - max_train_steps (Optional[int]): Maximum number of training steps.
+            - num_train_epochs (int): Number of training epochs.
+            - per_device_train_batch_size (int): Batch size per training device.
+            - checkpointing_steps (Union[int, str]): Interval for saving checkpoints.
+            - resume_from_checkpoint (Optional[str]): Path to resume training from a checkpoint.
+            - low_cpu_mem_usage (bool): Flag to optimize model for low CPU memory usage.
+            - trust_remote_code (bool): Whether to trust and execute remote code in custom models.
+            - use_slow_tokenizer (bool): Flag to use a slower but more customizable tokenizer.
+            - lr_scheduler_type (str): Type of learning rate scheduler.
+            - num_warmup_steps (int): Number of warm-up steps for the scheduler.
+            - max_grad_norm (float): Maximum norm for gradient clipping.
+            - checkpoints_total_limit (Optional[int]): Maximum number of checkpoints to retain.
     """
+
     def __init__(self, args):
         """Constructor"""
         # Sending telemetry. Tracking the example usage helps us better allocate resources to maintain them. The
@@ -140,13 +142,14 @@ class Trainer:
         model = VisionEncoderDecoderModel.from_pretrained(args.model_name_or_path)
         model.to(self.accelerator.device)
 
-        train_dataset = PDFDocumentDataset(**args.data_kwargs, processor = processor, model = model)
+        train_dataset = PDFDocumentDataset(
+            **args.data_kwargs, processor=processor, model=model
+        )
 
         # DataLoaders creation:
         train_dataloader = DataLoader(
             train_dataset,
             shuffle=True,
-            collate_fn=default_data_collator,
             batch_size=args.per_device_train_batch_size,
         )
 
@@ -330,7 +333,11 @@ class Trainer:
             for step, batch in enumerate(active_dataloader):
                 with self.accelerator.accumulate(self.model):
                     # Predict the logits and compute loss
-                    embeddings, labels, mask = batch['embeddings'], batch['labels'], batch['attn_mask']
+                    embeddings, labels, mask = (
+                        batch["embeddings"],
+                        batch["labels"],
+                        batch["attn_mask"],
+                    )
 
                     decoder_input_ids = shift_tokens_right(
                         labels,

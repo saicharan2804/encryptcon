@@ -17,7 +17,7 @@ class VAE(nn.Module):
 
         modules = []
         if hidden_dims is None:
-            hidden_dims = [32, 64, 128, 256, 512]
+            hidden_dims = [32, 64, 128,]
 
         self.in_conv = nn.Sequential(nn.Conv1d(2, 1, 1), nn.ReLU(), nn.Conv1d(1, 1, 1))
 

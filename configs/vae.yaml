@@ -1,29 +1,37 @@
-model_params:
-  name: 'VanillaVAE'
-  in_channels: 3
+mode : vae
+time_len : 10
+per_device_train_batch_size: 1
+learning_rate: 0.005
+weight_decay: 0.0
+num_train_epochs: 3
+max_train_steps: null
+gradient_accumulation_steps: 1
+lr_scheduler_type: "linear"
+num_warmup_steps: 0
+output_dir: "runs"
+seed: 42
+block_size: 2048
+preprocessing_num_workers: 8
+overwrite_cache: false
+no_keep_linebreaks: false
+push_to_hub: false
+hub_model_id: null
+hub_token: null
+trust_remote_code: false
+checkpointing_steps: null
+resume_from_checkpoint: null
+with_tracking: false
+report_to: "wandb"
+low_cpu_mem_usage: false
+model_name_or_path : naver-clova-ix/donut-base-finetuned-cord-v2
+data_kwargs:
+  csv_path : clean_data.csv
+  desired_length : ${time_len}
+model_kwargs:
+  in_channels: ${time_len}
   latent_dim: 128
 
 
-data_params:
-  data_path: "Data/"
-  train_batch_size: 64
-  val_batch_size:  64
-  patch_size: 64
-  num_workers: 4
 
 
-exp_params:
-  LR: 0.005
-  weight_decay: 0.0
-  scheduler_gamma: 0.95
-  kld_weight: 0.00025
-  manual_seed: 1265
-
-trainer_params:
-  gpus: [1]
-  max_epochs: 100
-
-logging_params:
-  save_dir: "logs/"
-  name: "VanillaVAE"
   

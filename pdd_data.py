@@ -2,9 +2,8 @@
 from transformers import DonutProcessor, VisionEncoderDecoderModel
 from torch.utils.data import Dataset
 from utils import *
-import pandas as pd
-import os
-from typing import List, Dict, Any
+from typing import Dict, Any
+
 
 class PDFDocumentDataset(Dataset):
     """
@@ -22,7 +21,13 @@ class PDFDocumentDataset(Dataset):
     dataframe (DataFrame): DataFrame holding the preprocessed data.
     """
 
-    def __init__(self, csv_path : str, pdf_folder_path : str, processor : DonutProcessor, model : VisionEncoderDecoderModel) -> None:
+    def __init__(
+        self,
+        csv_path: str,
+        pdf_folder_path: str,
+        processor: DonutProcessor,
+        model: VisionEncoderDecoderModel,
+    ) -> None:
         """
         Initialize the dataset with CSV and PDF paths, and the processor and model.
 
@@ -46,7 +51,7 @@ class PDFDocumentDataset(Dataset):
         """
         return len(self.dataframe)
 
-    def __getitem__(self, idx : int) -> Dict[str, Any]:
+    def __getitem__(self, idx: int) -> Dict[str, Any]:
         """
         Retrieve a single item from the dataset by its index.
 
@@ -61,28 +66,43 @@ class PDFDocumentDataset(Dataset):
         pdf_path = f"{self.pdf_folder_path}/{row['Project ID']}.pdf"
 
         # Generate embeddings from the PDF
-        embeddings = get_concatenated_representation(pdf_path, self.processor, self.model)
+        embeddings = get_concatenated_representation(
+            pdf_path, self.processor, self.model
+        )
 
         # Create a comma-separated text from the row, excluding embeddings-related data
-        text_data = '\n'.join([f"{k}:{v}" for k,v in row.drop(['Project ID', 'vintage_issue', 'retired_credits']).to_dict().items()])
+        text_data = "\n".join(
+            [
+                f"{k}:{v}"
+                for k, v in row.drop(["Project ID", "vintage_issue", "retired_credits"])
+                .to_dict()
+                .items()
+            ]
+        )
 
         # Construct the data dictionary
         data = {
-            "project_id": row['Project ID'],
+            "project_id": row["Project ID"],
             "description": text_data,
-            "vintage_issue": row['vintage_issue'],
-            "retired_credits": row['retired_credits'],
-            "embeddings": embeddings
+            "vintage_issue": row["vintage_issue"],
+            "retired_credits": row["retired_credits"],
+            "embeddings": embeddings,
         }
 
         # Concatenate data fields into a single text string, excluding embeddings
         text = ""
-        for k,v in data.items():
-            if k != 'embeddings':
+        for k, v in data.items():
+            if k != "embeddings":
                 text += f"{k} : {v},"
 
         # Tokenize the text
-        out = self.processor.tokenizer(text, padding="max_length", max_length=1024, add_special_tokens=False, return_tensors="pt")
+        out = self.processor.tokenizer(
+            text,
+            padding="max_length",
+            max_length=1024,
+            add_special_tokens=False,
+            return_tensors="pt",
+        )
         labels, attn_mask = out.input_ids, out.attention_mask
 
         # Add labels and attention mask to the data dictionary

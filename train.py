@@ -21,5 +21,6 @@ def train(cfg: DictConfig):
     trainer = TRAINER[cfg.mode](cfg)
     trainer.train()
 
+
 if __name__ == "__main__":
     train()

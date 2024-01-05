@@ -2,13 +2,25 @@
 from typing import List
 from haystack.schema import Document
 from haystack.document_stores import InMemoryDocumentStore
-from haystack.nodes import PromptNode, PromptTemplate, BM25Retriever, SentenceTransformersRanker
+from haystack.nodes import (
+    PromptNode,
+    PromptTemplate,
+    BM25Retriever,
+    SentenceTransformersRanker,
+)
 from haystack import Pipeline
 import torch
 
 
 class RAGPipeline:
-    def __init__(self, documents: List[str], retriever_top_k: int = 100, reranker_model: str = "cross-encoder/ms-marco-MiniLM-L-12-v2", prompt_model: str = "MBZUAI/LaMini-Flan-T5-783M", ranker_top_k : int = 10):
+    def __init__(
+        self,
+        documents: List[str],
+        retriever_top_k: int = 100,
+        reranker_model: str = "cross-encoder/ms-marco-MiniLM-L-12-v2",
+        prompt_model: str = "MBZUAI/LaMini-Flan-T5-783M",
+        ranker_top_k: int = 10,
+    ):
         """
         Initializes a Retrieval-Augmented Generation pipeline.
 
@@ -25,8 +37,12 @@ class RAGPipeline:
         """
         self.document_store = InMemoryDocumentStore(use_gpu=False, use_bm25=True)
         self._write_documents_to_store(documents)
-        self.retriever = BM25Retriever(document_store=self.document_store, top_k=retriever_top_k)
-        self.reranker = SentenceTransformersRanker(model_name_or_path=reranker_model, top_k=1)
+        self.retriever = BM25Retriever(
+            document_store=self.document_store, top_k=retriever_top_k
+        )
+        self.reranker = SentenceTransformersRanker(
+            model_name_or_path=reranker_model, top_k=1
+        )
         self.prompt = self._create_prompt_node(prompt_model)
         self.pipeline = self._create_pipeline()
 
@@ -88,8 +104,13 @@ class RAGPipeline:
         """
         return self.pipeline.run(query)
 
+
 # Example usage:
-documents = ["Document 1 content", "Document 2 content", ...]  # Replace with actual document strings
+documents = [
+    "Document 1 content",
+    "Document 2 content",
+    ...,
+]  # Replace with actual document strings
 rag_pipeline = RAGPipeline(documents)
 result = rag_pipeline.run("What is the content of Document 1?")
 print(result)

@@ -11,6 +11,8 @@ from accelerate.utils import set_seed
 import logging
 import os
 import math
+from torch.utils.data import DataLoader
+from series_dataset import TimeSeriesDataset
 from tqdm.auto import tqdm
 
 logger = get_logger(__name__)
@@ -18,34 +20,35 @@ logger = get_logger(__name__)
 
 class VaeTrainer:
     """
-        Initializes the VaeTrainer class, responsible for training a Variational Autoencoder (VAE).
+    Initializes the VaeTrainer class, responsible for training a Variational Autoencoder (VAE).
 
-        The VAE is trained to assess the risk associated with carbon credit trends based on historical data. 
-        This assessment aids in understanding the potential risks involved in carbon credit allocation for 
-        various projects, contributing to more informed decision-making.
+    The VAE is trained to assess the risk associated with carbon credit trends based on historical data.
+    This assessment aids in understanding the potential risks involved in carbon credit allocation for
+    various projects, contributing to more informed decision-making.
 
-        Args:
-            args (DictConfig): An argparse.Namespace object containing training configurations. 
-                It includes:
-                - with_tracking (bool): Flag to enable tracking.
-                - report_to (str): The reporting destination for logging.
-                - output_dir (str): Directory to save output files.
-                - gradient_accumulation_steps (int): Number of steps for gradient accumulation.
-                - seed (Optional[int]): Random seed for reproducibility.
-                - weight_decay (float): Weight decay parameter for optimizer.
-                - learning_rate (float): Learning rate for training.
-                - max_train_steps (Optional[int]): Maximum number of training steps.
-                - num_train_epochs (int): Number of training epochs.
-                - model_kwargs (dict): Keyword arguments for the VAE model.
-                - per_device_train_batch_size (int): Batch size per device.
-                - checkpointing_steps (Union[int, str]): Interval for checkpointing.
-                - resume_from_checkpoint (Optional[str]): Path to resume training from a checkpoint.
-                - max_grad_norm (float): Maximum gradient norm for clipping.
-                - checkpoints_total_limit (Optional[int]): Total limit for saved checkpoints.
+    Args:
+        args (DictConfig): An argparse.Namespace object containing training configurations.
+            It includes:
+            - with_tracking (bool): Flag to enable tracking.
+            - report_to (str): The reporting destination for logging.
+            - output_dir (str): Directory to save output files.
+            - gradient_accumulation_steps (int): Number of steps for gradient accumulation.
+            - seed (Optional[int]): Random seed for reproducibility.
+            - weight_decay (float): Weight decay parameter for optimizer.
+            - learning_rate (float): Learning rate for training.
+            - max_train_steps (Optional[int]): Maximum number of training steps.
+            - num_train_epochs (int): Number of training epochs.
+            - model_kwargs (dict): Keyword arguments for the VAE model.
+            - per_device_train_batch_size (int): Batch size per device.
+            - checkpointing_steps (Union[int, str]): Interval for checkpointing.
+            - resume_from_checkpoint (Optional[str]): Path to resume training from a checkpoint.
+            - max_grad_norm (float): Maximum gradient norm for clipping.
+            - checkpoints_total_limit (Optional[int]): Total limit for saved checkpoints.
     """
-    def __init__(self, args : DictConfig):
+
+    def __init__(self, args: DictConfig):
         """Constructor"""
-        
+
         # Initialize the accelerator. We will let the accelerator handle device placement for us in this example.
         # If we're using tracking, we also need to initialize it here and it will by default pick up all supported trackers
         # in the environment
@@ -67,7 +70,6 @@ class VaeTrainer:
             level=logging.INFO,
         )
         logger.info(self.accelerator.state, main_process_only=False)
-
 
         # Seed setting for reproducibility.
         if args.seed is not None:
@@ -104,6 +106,14 @@ class VaeTrainer:
         ]
         optimizer = torch.optim.AdamW(
             optimizer_grouped_parameters, lr=args.learning_rate
+        )
+
+        train_dataset = TimeSeriesDataset(**args.dataset_kwargs)
+
+        train_dataloader = DataLoader(
+            train_dataset,
+            shuffle=True,
+            batch_size=args.per_device_train_batch_size,
         )
 
         # Scheduler and math around the number of training steps.
@@ -185,7 +195,7 @@ class VaeTrainer:
         """
         Executes the training process for the VAE model.
 
-        This method handles training over epochs, implements gradient accumulation, 
+        This method handles training over epochs, implements gradient accumulation,
         performs checkpointing, and manages training resumption from saved states.
 
         The training process includes:
