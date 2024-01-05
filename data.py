@@ -68,7 +68,9 @@ class PDFDocumentDataset(Dataset):
             if k!= 'embeddings':
                 text += f"{k} : {v},"
 
-        labels, attn_mask = self.processor.tokenizer(text, padding = "max_length", max_length = 1024, add_special_tokens=False, return_tensors="pt")
+        out = self.processor.tokenizer(text, padding = "max_length", max_length = 1024, add_special_tokens=False, return_tensors="pt")
+
+        labels, attn_mask = out.input_ids, out.attention_mask
 
         data["labels"] = labels
         data["attn_mask"] = attn_mask

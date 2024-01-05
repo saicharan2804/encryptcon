@@ -20,6 +20,7 @@ from tqdm.auto import tqdm
 from utils import shift_tokens_right
 import transformers
 from transformers import DonutProcessor, VisionEncoderDecoderModel
+from data import PDFDocumentDataset
 from transformers import (
     AutoConfig,
     default_data_collator,
@@ -136,6 +137,8 @@ class Trainer:
             low_cpu_mem_usage=args.low_cpu_mem_usage,
             trust_remote_code=args.trust_remote_code,
         )
+
+        train_dataset = PDFDocumentDataset(**args.data_kwargs)
 
         # DataLoaders creation:
         train_dataloader = DataLoader(
@@ -327,7 +330,7 @@ class Trainer:
             for step, batch in enumerate(active_dataloader):
                 with self.accelerator.accumulate(self.model):
                     # Predict the logits and compute loss
-                    embeddings, labels = batch
+                    embeddings, labels, mask = batch['embeddings'], batch['labels'], batch['attn_mask']
 
                     decoder_input_ids = shift_tokens_right(
                         labels,
@@ -338,6 +341,7 @@ class Trainer:
                     # Decode
                     outputs = self.model.decoder(
                         input_ids=decoder_input_ids,
+                        attention_mask=mask,
                         encoder_hidden_states=embeddings,
                     )
 
