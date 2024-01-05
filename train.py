@@ -3,13 +3,13 @@ from omegaconf import DictConfig
 from train_vae import VaeTrainer
 from train_llm import Trainer
 
-TRAINER = {'llm' : Trainer, "vae" : VaeTrainer}
+TRAINER = {"llm": Trainer, "vae": VaeTrainer}
 
 
-@hydra.main(version_base=None, config_path = "configs", config_name = "llm")
-def train(cfg : DictConfig):
+@hydra.main(version_base=None, config_path="configs", config_name="llm")
+def train(cfg: DictConfig):
     """Function to run the train pipeline.
-    
+
     Provides a simple interface to train any model [VAE|LLM]
 
     Args:
@@ -20,4 +20,3 @@ def train(cfg : DictConfig):
 
     trainer = TRAINER[cfg.mode](cfg)
     trainer.train()
-

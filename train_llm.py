@@ -45,7 +45,10 @@ check_min_version("4.37.0.dev0")
 
 logger = get_logger(__name__)
 
-require_version("datasets>=1.8.0", "To fix: pip install -r examples/pytorch/language-modeling/requirements.txt")
+require_version(
+    "datasets>=1.8.0",
+    "To fix: pip install -r examples/pytorch/language-modeling/requirements.txt",
+)
 
 MODEL_CONFIG_CLASSES = list(MODEL_MAPPING.keys())
 MODEL_TYPES = tuple(conf.model_type for conf in MODEL_CONFIG_CLASSES)
@@ -53,8 +56,6 @@ MODEL_TYPES = tuple(conf.model_type for conf in MODEL_CONFIG_CLASSES)
 
 class Trainer:
     def __init__(self, args):
-
-
         # Sending telemetry. Tracking the example usage helps us better allocate resources to maintain them. The
         # information sent is the one passed as arguments along with your Python/PyTorch versions.
         send_example_telemetry("run_clm_no_trainer", args)
@@ -68,7 +69,10 @@ class Trainer:
             accelerator_log_kwargs["log_with"] = args.report_to
             accelerator_log_kwargs["project_dir"] = args.output_dir
 
-        self.accelerator = Accelerator(gradient_accumulation_steps=args.gradient_accumulation_steps, **accelerator_log_kwargs)
+        self.accelerator = Accelerator(
+            gradient_accumulation_steps=args.gradient_accumulation_steps,
+            **accelerator_log_kwargs,
+        )
 
         # Make one log on every process with the configuration for debugging.
         logging.basicConfig(
@@ -94,34 +98,39 @@ class Trainer:
                 os.makedirs(args.output_dir, exist_ok=True)
         self.accelerator.wait_for_everyone()
 
-        
         # Load pretrained model and tokenizer/feature extractor
         #
         # In distributed training, the .from_pretrained methods guarantee that only one local process can concurrently
         # download model & vocab.
         config = AutoConfig.from_pretrained(
-                args.model_name_or_path,
-                trust_remote_code=args.trust_remote_code,
-            )
+            args.model_name_or_path,
+            trust_remote_code=args.trust_remote_code,
+        )
 
         tokenizer = DonutProcessor.from_pretrained(
-                args.model_name_or_path, use_fast=not args.use_slow_tokenizer, trust_remote_code=args.trust_remote_code
-            )
+            args.model_name_or_path,
+            use_fast=not args.use_slow_tokenizer,
+            trust_remote_code=args.trust_remote_code,
+        )
 
         model = VisionEncoderDecoderModel.from_pretrained(
-                args.model_name_or_path,
-                config=config,
-                low_cpu_mem_usage=args.low_cpu_mem_usage,
-                trust_remote_code=args.trust_remote_code,
-            )
+            args.model_name_or_path,
+            config=config,
+            low_cpu_mem_usage=args.low_cpu_mem_usage,
+            trust_remote_code=args.trust_remote_code,
+        )
 
-        
         # DataLoaders creation:
         train_dataloader = DataLoader(
-            train_dataset, shuffle=True, collate_fn=default_data_collator, batch_size=args.per_device_train_batch_size
+            train_dataset,
+            shuffle=True,
+            collate_fn=default_data_collator,
+            batch_size=args.per_device_train_batch_size,
         )
         eval_dataloader = DataLoader(
-            eval_dataset, collate_fn=default_data_collator, batch_size=args.per_device_eval_batch_size
+            eval_dataset,
+            collate_fn=default_data_collator,
+            batch_size=args.per_device_eval_batch_size,
         )
 
         # Optimizer
@@ -129,19 +138,31 @@ class Trainer:
         no_decay = ["bias", "layer_norm.weight"]
         optimizer_grouped_parameters = [
             {
-                "params": [p for n, p in model.named_parameters() if not any(nd in n for nd in no_decay)],
+                "params": [
+                    p
+                    for n, p in model.named_parameters()
+                    if not any(nd in n for nd in no_decay)
+                ],
                 "weight_decay": args.weight_decay,
             },
             {
-                "params": [p for n, p in model.named_parameters() if any(nd in n for nd in no_decay)],
+                "params": [
+                    p
+                    for n, p in model.named_parameters()
+                    if any(nd in n for nd in no_decay)
+                ],
                 "weight_decay": 0.0,
             },
         ]
-        optimizer = torch.optim.AdamW(optimizer_grouped_parameters, lr=args.learning_rate)
+        optimizer = torch.optim.AdamW(
+            optimizer_grouped_parameters, lr=args.learning_rate
+        )
 
         # Scheduler and math around the number of training steps.
         overrode_max_train_steps = False
-        num_update_steps_per_epoch = math.ceil(len(train_dataloader) / args.gradient_accumulation_steps)
+        num_update_steps_per_epoch = math.ceil(
+            len(train_dataloader) / args.gradient_accumulation_steps
+        )
         if args.max_train_steps is None:
             args.max_train_steps = args.num_train_epochs * num_update_steps_per_epoch
             overrode_max_train_steps = True
@@ -156,20 +177,27 @@ class Trainer:
         self.criterion = torch.nn.CrossEntropyLoss()
 
         # Prepare everything with our `accelerator`.
-        self.model, self.optimizer, self.train_dataloader, self.lr_scheduler = self.accelerator.prepare(
-            model, optimizer, train_dataloader, lr_scheduler
-        )
+        (
+            self.model,
+            self.optimizer,
+            self.train_dataloader,
+            self.lr_scheduler,
+        ) = self.accelerator.prepare(model, optimizer, train_dataloader, lr_scheduler)
 
         # On TPU, the tie weights in our model have been disconnected, so we need to restore the ties.
         if self.accelerator.distributed_type == DistributedType.TPU:
             model.tie_weights()
 
         # We need to recalculate our total training steps as the size of the training dataloader may have changed.
-        num_update_steps_per_epoch = math.ceil(len(self.train_dataloader) / args.gradient_accumulation_steps)
+        num_update_steps_per_epoch = math.ceil(
+            len(self.train_dataloader) / args.gradient_accumulation_steps
+        )
         if overrode_max_train_steps:
             args.max_train_steps = args.num_train_epochs * num_update_steps_per_epoch
         # Afterwards we recalculate our number of training epochs
-        args.num_train_epochs = math.ceil(args.max_train_steps / num_update_steps_per_epoch)
+        args.num_train_epochs = math.ceil(
+            args.max_train_steps / num_update_steps_per_epoch
+        )
 
         # Figure out how many steps we should save the Accelerator states
         checkpointing_steps = args.checkpointing_steps
@@ -181,38 +209,57 @@ class Trainer:
         if args.with_tracking:
             experiment_config = vars(args)
             # TensorBoard cannot log Enums, need the raw value
-            experiment_config["lr_scheduler_type"] = experiment_config["lr_scheduler_type"].value
+            experiment_config["lr_scheduler_type"] = experiment_config[
+                "lr_scheduler_type"
+            ].value
             self.accelerator.init_trackers("clm_no_trainer", experiment_config)
 
         # Train!
-        total_batch_size = args.per_device_train_batch_size * self.accelerator.num_processes * args.gradient_accumulation_steps
+        total_batch_size = (
+            args.per_device_train_batch_size
+            * self.accelerator.num_processes
+            * args.gradient_accumulation_steps
+        )
 
         logger.info("***** Running training *****")
         logger.info(f"  Num examples = {len(train_dataset)}")
         logger.info(f"  Num Epochs = {args.num_train_epochs}")
-        logger.info(f"  Instantaneous batch size per device = {args.per_device_train_batch_size}")
-        logger.info(f"  Total train batch size (w. parallel, distributed & accumulation) = {total_batch_size}")
-        logger.info(f"  Gradient Accumulation steps = {args.gradient_accumulation_steps}")
+        logger.info(
+            f"  Instantaneous batch size per device = {args.per_device_train_batch_size}"
+        )
+        logger.info(
+            f"  Total train batch size (w. parallel, distributed & accumulation) = {total_batch_size}"
+        )
+        logger.info(
+            f"  Gradient Accumulation steps = {args.gradient_accumulation_steps}"
+        )
         logger.info(f"  Total optimization steps = {args.max_train_steps}")
         # Only show the progress bar once on each machine.
-        self.progress_bar = tqdm(range(args.max_train_steps), disable=not self.accelerator.is_local_main_process)
+        self.progress_bar = tqdm(
+            range(args.max_train_steps),
+            disable=not self.accelerator.is_local_main_process,
+        )
         self.completed_steps = 0
         self.starting_epoch = 0
 
         self.args = args
 
     def train(self):
-
         # Potentially load in the weights and states from a previous save
         if self.args.resume_from_checkpoint:
-            if self.args.resume_from_checkpoint is not None or self.args.resume_from_checkpoint != "":
+            if (
+                self.args.resume_from_checkpoint is not None
+                or self.args.resume_from_checkpoint != ""
+            ):
                 checkpoint_path = self.args.resume_from_checkpoint
                 path = os.path.basename(self.args.resume_from_checkpoint)
             else:
                 # Get the most recent checkpoint
                 dirs = [f.name for f in os.scandir(os.getcwd()) if f.is_dir()]
                 dirs.sort(key=os.path.getctime)
-                path = dirs[-1]  # Sorts folders by date modified, most recent checkpoint is the last
+                path = dirs[
+                    -1
+                ]  # Sorts folders by date modified, most recent checkpoint is the last
                 checkpoint_path = path
                 path = os.path.basename(checkpoint_path)
 
@@ -227,7 +274,10 @@ class Trainer:
                 completed_steps = starting_epoch * self.num_update_steps_per_epoch
             else:
                 # need to multiply `gradient_accumulation_steps` to reflect real steps
-                resume_step = int(training_difference.replace("step_", "")) * self.args.gradient_accumulation_steps
+                resume_step = (
+                    int(training_difference.replace("step_", ""))
+                    * self.args.gradient_accumulation_steps
+                )
                 starting_epoch = resume_step // len(self.train_dataloader)
                 completed_steps = resume_step // self.args.gradient_accumulation_steps
                 resume_step -= starting_epoch * len(self.train_dataloader)
@@ -239,21 +289,27 @@ class Trainer:
             self.model.train()
             if self.args.with_tracking:
                 total_loss = 0
-            if self.args.resume_from_checkpoint and epoch == starting_epoch and resume_step is not None:
+            if (
+                self.args.resume_from_checkpoint
+                and epoch == starting_epoch
+                and resume_step is not None
+            ):
                 # We skip the first `n` batches in the dataloader when resuming from a checkpoint
-                active_dataloader = self.accelerator.skip_first_batches(self.train_dataloader, resume_step)
+                active_dataloader = self.accelerator.skip_first_batches(
+                    self.train_dataloader, resume_step
+                )
             else:
                 active_dataloader = self.train_dataloader
             for step, batch in enumerate(active_dataloader):
-
                 with self.accelerator.accumulate(self.model):
-                    
                     # Predict the logits and compute loss
                     embeddings, labels = batch
 
                     decoder_input_ids = shift_tokens_right(
-                            labels, self.config.pad_token_id, self.config.decoder_start_token_id
-                        )
+                        labels,
+                        self.config.pad_token_id,
+                        self.config.decoder_start_token_id,
+                    )
 
                     # Decode
                     outputs = self.model.decoder(
@@ -262,26 +318,36 @@ class Trainer:
                     )
 
                     logits = outputs.logits
-                    loss = self.criterion(logits.reshape(-1, self.decoder.config.vocab_size), labels.reshape(-1))
+                    loss = self.criterion(
+                        logits.reshape(-1, self.decoder.config.vocab_size),
+                        labels.reshape(-1),
+                    )
 
                     # Gather the losses across all processes for logging (if we use distributed training).
-                    avg_loss = self.accelerator.gather(loss.repeat(self.args.train_batch_size)).mean()
-                    train_loss += avg_loss.item() / self.args.gradient_accumulation_steps
+                    avg_loss = self.accelerator.gather(
+                        loss.repeat(self.args.train_batch_size)
+                    ).mean()
+                    train_loss += (
+                        avg_loss.item() / self.args.gradient_accumulation_steps
+                    )
 
                     # Backpropagate
                     self.accelerator.backward(loss)
                     if self.accelerator.sync_gradients:
-                        self.accelerator.clip_grad_norm_(self.model.parameters(), self.args.max_grad_norm)
+                        self.accelerator.clip_grad_norm_(
+                            self.model.parameters(), self.args.max_grad_norm
+                        )
                     self.optimizer.step()
                     self.lr_scheduler.step()
                     self.optimizer.zero_grad()
 
                 # Checks if the self.accelerator has performed an optimization step behind the scenes
                 if self.accelerator.sync_gradients:
-
                     self.progress_bar.update(1)
                     completed_steps += 1
-                    self.accelerator.log({"train_loss": train_loss}, step=completed_steps)
+                    self.accelerator.log(
+                        {"train_loss": train_loss}, step=completed_steps
+                    )
                     train_loss = 0.0
 
                     if isinstance(self.checkpointing_steps, int):
@@ -290,30 +356,55 @@ class Trainer:
                                 # _before_ saving state, check if this save would set us over the `checkpoints_total_limit`
                                 if self.args.checkpoints_total_limit is not None:
                                     checkpoints = os.listdir(self.args.output_dir)
-                                    checkpoints = [d for d in checkpoints if d.startswith("checkpoint")]
-                                    checkpoints = sorted(checkpoints, key=lambda x: int(x.split("-")[1]))
+                                    checkpoints = [
+                                        d
+                                        for d in checkpoints
+                                        if d.startswith("checkpoint")
+                                    ]
+                                    checkpoints = sorted(
+                                        checkpoints, key=lambda x: int(x.split("-")[1])
+                                    )
 
                                     # before we save the new checkpoint, we need to have at _most_ `checkpoints_total_limit - 1` checkpoints
-                                    if len(checkpoints) >= self.args.checkpoints_total_limit:
-                                        num_to_remove = len(checkpoints) - self.args.checkpoints_total_limit + 1
-                                        removing_checkpoints = checkpoints[0:num_to_remove]
+                                    if (
+                                        len(checkpoints)
+                                        >= self.args.checkpoints_total_limit
+                                    ):
+                                        num_to_remove = (
+                                            len(checkpoints)
+                                            - self.args.checkpoints_total_limit
+                                            + 1
+                                        )
+                                        removing_checkpoints = checkpoints[
+                                            0:num_to_remove
+                                        ]
 
                                         logger.info(
                                             f"{len(checkpoints)} checkpoints already exist, removing {len(removing_checkpoints)} checkpoints"
                                         )
-                                        logger.info(f"removing checkpoints: {', '.join(removing_checkpoints)}")
+                                        logger.info(
+                                            f"removing checkpoints: {', '.join(removing_checkpoints)}"
+                                        )
 
                                         for removing_checkpoint in removing_checkpoints:
-                                            removing_checkpoint = os.path.join(self.args.output_dir, removing_checkpoint)
+                                            removing_checkpoint = os.path.join(
+                                                self.args.output_dir,
+                                                removing_checkpoint,
+                                            )
                                             shutil.rmtree(removing_checkpoint)
 
-                                save_path = os.path.join(self.args.output_dir, f"checkpoint-{completed_steps}")
+                                save_path = os.path.join(
+                                    self.args.output_dir,
+                                    f"checkpoint-{completed_steps}",
+                                )
                                 self.accelerator.save_state(save_path)
                                 logger.info(f"Saved state to {save_path}")
 
-                logs = {"step_loss": loss.detach().item(), "lr": self.lr_scheduler.get_last_lr()[0]}
+                logs = {
+                    "step_loss": loss.detach().item(),
+                    "lr": self.lr_scheduler.get_last_lr()[0],
+                }
                 self.progress_bar.set_postfix(**logs)
-
 
                 if completed_steps >= self.args.max_train_steps:
                     break
@@ -344,9 +435,9 @@ class Trainer:
             self.accelerator.wait_for_everyone()
             unwrapped_model = self.accelerator.unwrap_model(self.model)
             unwrapped_model.save_pretrained(
-                self.args.output_dir, is_main_process=self.accelerator.is_main_process, save_function=self.accelerator.save
+                self.args.output_dir,
+                is_main_process=self.accelerator.is_main_process,
+                save_function=self.accelerator.save,
             )
             if self.accelerator.is_main_process:
                 self.tokenizer.save_pretrained(self.args.output_dir)
-
-

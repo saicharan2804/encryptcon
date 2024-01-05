@@ -3,8 +3,11 @@ from datasets import load_dataset
 from PIL import Image
 import io
 
+
 class CustomDataset(IterableDataset):
-    def __init__(self, dataset_name, split, feature_extractor, samples_per_class, subset='train'):
+    def __init__(
+        self, dataset_name, split, feature_extractor, samples_per_class, subset="train"
+    ):
         self.dataset_name = dataset_name
         self.split = split
         self.feature_extractor = feature_extractor
@@ -21,21 +24,26 @@ class CustomDataset(IterableDataset):
         self.samples_collected = {label: 0 for label in range(num_labels)}
 
     def preprocess(self, example):
-        if isinstance(example['image'], bytes):
-            image = Image.open(io.BytesIO(example['image']))
+        if isinstance(example["image"], bytes):
+            image = Image.open(io.BytesIO(example["image"]))
         else:
-            image = example['image']
-        if image.mode != 'RGB':
-            image = image.convert('RGB')
+            image = example["image"]
+        if image.mode != "RGB":
+            image = image.convert("RGB")
 
-        pixel_values = self.feature_extractor(images=image, return_tensors="pt").pixel_values.squeeze()
-        return pixel_values, example['label']
+        pixel_values = self.feature_extractor(
+            images=image, return_tensors="pt"
+        ).pixel_values.squeeze()
+        return pixel_values, example["label"]
 
     def __iter__(self):
         for example in self.dataset_stream:
-            label = example['label']
+            label = example["label"]
             if self.samples_collected[label] < self.samples_per_class:
                 self.samples_collected[label] += 1
                 yield self.preprocess(example)
-            if all(value == self.samples_per_class for value in self.samples_collected.values()):
+            if all(
+                value == self.samples_per_class
+                for value in self.samples_collected.values()
+            ):
                 break
