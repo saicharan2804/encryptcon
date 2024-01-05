@@ -1,7 +1,5 @@
 import torch
-from torch import nn, optim
-from torch.utils.data import DataLoader
-from torchvision import datasets, transforms
+from torch import optim
 from accelerate import Accelerator
 from vae import VAE
 import shutil
@@ -11,7 +9,6 @@ import logging
 import os
 import math
 from tqdm.auto import tqdm
-from transformers import get_scheduler
 
 logger = get_logger(__name__)
 
@@ -207,6 +204,7 @@ class VaeTrainer:
                 )
             else:
                 active_dataloader = self.train_dataloader
+            train_loss = 0.0
             for step, batch in enumerate(active_dataloader):
                 with self.accelerator.accumulate(self.model):
                     credit = batch
@@ -243,6 +241,7 @@ class VaeTrainer:
                     self.accelerator.log(
                         {"train_loss": train_loss}, step=completed_steps
                     )
+                    total_loss += train_loss
                     train_loss = 0.0
 
                     if isinstance(self.checkpointing_steps, int):

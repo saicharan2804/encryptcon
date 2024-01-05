@@ -1,0 +1,3 @@
+[submodule "fastRAG"]
+	path = fastRAG
+	url = https://github.com/IntelLabs/fastRAG.git

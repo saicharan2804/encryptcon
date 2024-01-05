@@ -5,34 +5,23 @@ on a text file or a dataset without using HuggingFace Trainer.
 """
 # You can also adapt this script on your own causal language modeling task. Pointers for this are left as comments.
 
-import argparse
-import json
+
 import logging
 import math
 import os
-import random
-from itertools import chain
-from pathlib import Path
 import shutil
 import datasets
 import torch
 from accelerate import Accelerator, DistributedType
 from accelerate.logging import get_logger
 from accelerate.utils import set_seed
-from datasets import load_dataset
-from huggingface_hub import Repository, create_repo
 from torch.utils.data import DataLoader
 from tqdm.auto import tqdm
 from utils import shift_tokens_right
 import transformers
 from transformers import DonutProcessor, VisionEncoderDecoderModel
 from transformers import (
-    CONFIG_MAPPING,
-    MODEL_MAPPING,
     AutoConfig,
-    AutoModelForCausalLM,
-    AutoTokenizer,
-    SchedulerType,
     default_data_collator,
     get_scheduler,
 )
@@ -49,10 +38,6 @@ require_version(
     "datasets>=1.8.0",
     "To fix: pip install -r examples/pytorch/language-modeling/requirements.txt",
 )
-
-MODEL_CONFIG_CLASSES = list(MODEL_MAPPING.keys())
-MODEL_TYPES = tuple(conf.model_type for conf in MODEL_CONFIG_CLASSES)
-
 
 class Trainer:
     def __init__(self, args):
@@ -107,7 +92,7 @@ class Trainer:
             trust_remote_code=args.trust_remote_code,
         )
 
-        tokenizer = DonutProcessor.from_pretrained(
+        self.tokenizer = DonutProcessor.from_pretrained(
             args.model_name_or_path,
             use_fast=not args.use_slow_tokenizer,
             trust_remote_code=args.trust_remote_code,
@@ -126,11 +111,6 @@ class Trainer:
             shuffle=True,
             collate_fn=default_data_collator,
             batch_size=args.per_device_train_batch_size,
-        )
-        eval_dataloader = DataLoader(
-            eval_dataset,
-            collate_fn=default_data_collator,
-            batch_size=args.per_device_eval_batch_size,
         )
 
         # Optimizer
@@ -300,6 +280,7 @@ class Trainer:
                 )
             else:
                 active_dataloader = self.train_dataloader
+            train_loss = 0.0
             for step, batch in enumerate(active_dataloader):
                 with self.accelerator.accumulate(self.model):
                     # Predict the logits and compute loss
@@ -348,6 +329,7 @@ class Trainer:
                     self.accelerator.log(
                         {"train_loss": train_loss}, step=completed_steps
                     )
+                    total_loss += train_loss
                     train_loss = 0.0
 
                     if isinstance(self.checkpointing_steps, int):
@@ -410,7 +392,6 @@ class Trainer:
                     break
 
             self.model.eval()
-            losses = []
 
             if self.args.with_tracking:
                 self.accelerator.log(
