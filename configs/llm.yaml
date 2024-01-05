@@ -21,3 +21,7 @@ resume_from_checkpoint: null
 with_tracking: true
 report_to: "wandb"
 low_cpu_mem_usage: false
+model_name : naver-clova-ix/donut-base-finetuned-cord-v2
+data_kwargs:
+  csv_path : clean_data.csv
+  pdf_folder_path : dataset

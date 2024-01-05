@@ -20,7 +20,7 @@ from tqdm.auto import tqdm
 from utils import shift_tokens_right
 import transformers
 from transformers import DonutProcessor, VisionEncoderDecoderModel
-from data import PDFDocumentDataset
+from pdd_data import PDFDocumentDataset
 from transformers import (
     AutoConfig,
     default_data_collator,
@@ -138,7 +138,11 @@ class Trainer:
             trust_remote_code=args.trust_remote_code,
         )
 
-        train_dataset = PDFDocumentDataset(**args.data_kwargs)
+        processor = DonutProcessor.from_pretrained(args.model_name)
+        model = VisionEncoderDecoderModel.from_pretrained(args.model_name)
+        model.to(self.accelerator.device)
+
+        train_dataset = PDFDocumentDataset(**args.data_kwargs, processor = processor, model = model)
 
         # DataLoaders creation:
         train_dataloader = DataLoader(
