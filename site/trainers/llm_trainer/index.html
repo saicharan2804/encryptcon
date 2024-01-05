@@ -64,6 +64,13 @@
                   <li class="toctree-l1"><a class="reference internal" href="../../RAG/">Retrival Augmented Generation</a>
                   </li>
               </ul>
+              <p class="caption"><span class="caption-text">Data</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../dataset/pdd_dataset/">PDD Dataset</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../dataset/series_dataset/">Time Series Data</a>
+                  </li>
+              </ul>
       </div>
     </div>
     </nav>
@@ -182,8 +189,7 @@ enhancing the efficiency and accuracy of project evaluation.</p>
 </table>
             <details class="quote">
               <summary>Source code in <code>train_llm.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 42</span>
-<span class="normal"> 43</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 43</span>
 <span class="normal"> 44</span>
 <span class="normal"> 45</span>
 <span class="normal"> 46</span>
@@ -607,7 +613,11 @@ enhancing the efficiency and accuracy of project evaluation.</p>
 <span class="normal">464</span>
 <span class="normal">465</span>
 <span class="normal">466</span>
-<span class="normal">467</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">Trainer</span><span class="p">:</span>
+<span class="normal">467</span>
+<span class="normal">468</span>
+<span class="normal">469</span>
+<span class="normal">470</span>
+<span class="normal">471</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">Trainer</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Initializes the Trainer class for a Language Model (LLM) finetuning.</span>
 
@@ -694,8 +704,6 @@ enhancing the efficiency and accuracy of project evaluation.</p>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">tokenizer</span> <span class="o">=</span> <span class="n">DonutProcessor</span><span class="o">.</span><span class="n">from_pretrained</span><span class="p">(</span>
             <span class="n">args</span><span class="o">.</span><span class="n">model_name_or_path</span><span class="p">,</span>
-            <span class="n">use_fast</span><span class="o">=</span><span class="ow">not</span> <span class="n">args</span><span class="o">.</span><span class="n">use_slow_tokenizer</span><span class="p">,</span>
-            <span class="n">trust_remote_code</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">trust_remote_code</span><span class="p">,</span>
         <span class="p">)</span>
 
         <span class="n">model</span> <span class="o">=</span> <span class="n">VisionEncoderDecoderModel</span><span class="o">.</span><span class="n">from_pretrained</span><span class="p">(</span>
@@ -704,6 +712,12 @@ enhancing the efficiency and accuracy of project evaluation.</p>
             <span class="n">low_cpu_mem_usage</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">low_cpu_mem_usage</span><span class="p">,</span>
             <span class="n">trust_remote_code</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">trust_remote_code</span><span class="p">,</span>
         <span class="p">)</span>
+
+        <span class="n">processor</span> <span class="o">=</span> <span class="n">DonutProcessor</span><span class="o">.</span><span class="n">from_pretrained</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">model_name_or_path</span><span class="p">)</span>
+        <span class="n">model</span> <span class="o">=</span> <span class="n">VisionEncoderDecoderModel</span><span class="o">.</span><span class="n">from_pretrained</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">model_name_or_path</span><span class="p">)</span>
+        <span class="n">model</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">accelerator</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
+
+        <span class="n">train_dataset</span> <span class="o">=</span> <span class="n">PDFDocumentDataset</span><span class="p">(</span><span class="o">**</span><span class="n">args</span><span class="o">.</span><span class="n">data_kwargs</span><span class="p">,</span> <span class="n">processor</span> <span class="o">=</span> <span class="n">processor</span><span class="p">,</span> <span class="n">model</span> <span class="o">=</span> <span class="n">model</span><span class="p">)</span>
 
         <span class="c1"># DataLoaders creation:</span>
         <span class="n">train_dataloader</span> <span class="o">=</span> <span class="n">DataLoader</span><span class="p">(</span>
@@ -788,10 +802,7 @@ enhancing the efficiency and accuracy of project evaluation.</p>
         <span class="c1"># The trackers initializes automatically on the main process.</span>
         <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">with_tracking</span><span class="p">:</span>
             <span class="n">experiment_config</span> <span class="o">=</span> <span class="nb">vars</span><span class="p">(</span><span class="n">args</span><span class="p">)</span>
-            <span class="c1"># TensorBoard cannot log Enums, need the raw value</span>
-            <span class="n">experiment_config</span><span class="p">[</span><span class="s2">&quot;lr_scheduler_type&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">experiment_config</span><span class="p">[</span>
-                <span class="s2">&quot;lr_scheduler_type&quot;</span>
-            <span class="p">]</span><span class="o">.</span><span class="n">value</span>
+
             <span class="bp">self</span><span class="o">.</span><span class="n">accelerator</span><span class="o">.</span><span class="n">init_trackers</span><span class="p">(</span><span class="s2">&quot;clm_no_trainer&quot;</span><span class="p">,</span> <span class="n">experiment_config</span><span class="p">)</span>
 
         <span class="c1"># Train!</span>
@@ -819,8 +830,6 @@ enhancing the efficiency and accuracy of project evaluation.</p>
             <span class="nb">range</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">max_train_steps</span><span class="p">),</span>
             <span class="n">disable</span><span class="o">=</span><span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">accelerator</span><span class="o">.</span><span class="n">is_local_main_process</span><span class="p">,</span>
         <span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">completed_steps</span> <span class="o">=</span> <span class="mi">0</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">starting_epoch</span> <span class="o">=</span> <span class="mi">0</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">args</span> <span class="o">=</span> <span class="n">args</span>
 
@@ -836,6 +845,9 @@ enhancing the efficiency and accuracy of project evaluation.</p>
 <span class="sd">        - Performing checkpointing based on specified intervals.</span>
 <span class="sd">        - Logging training progress and metrics.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">completed_steps</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">starting_epoch</span> <span class="o">=</span> <span class="mi">0</span>
         <span class="c1"># Potentially load in the weights and states from a previous save</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">args</span><span class="o">.</span><span class="n">resume_from_checkpoint</span><span class="p">:</span>
             <span class="k">if</span> <span class="p">(</span>
@@ -895,7 +907,7 @@ enhancing the efficiency and accuracy of project evaluation.</p>
             <span class="k">for</span> <span class="n">step</span><span class="p">,</span> <span class="n">batch</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">active_dataloader</span><span class="p">):</span>
                 <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">accelerator</span><span class="o">.</span><span class="n">accumulate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">):</span>
                     <span class="c1"># Predict the logits and compute loss</span>
-                    <span class="n">embeddings</span><span class="p">,</span> <span class="n">labels</span> <span class="o">=</span> <span class="n">batch</span>
+                    <span class="n">embeddings</span><span class="p">,</span> <span class="n">labels</span><span class="p">,</span> <span class="n">mask</span> <span class="o">=</span> <span class="n">batch</span><span class="p">[</span><span class="s1">&#39;embeddings&#39;</span><span class="p">],</span> <span class="n">batch</span><span class="p">[</span><span class="s1">&#39;labels&#39;</span><span class="p">],</span> <span class="n">batch</span><span class="p">[</span><span class="s1">&#39;attn_mask&#39;</span><span class="p">]</span>
 
                     <span class="n">decoder_input_ids</span> <span class="o">=</span> <span class="n">shift_tokens_right</span><span class="p">(</span>
                         <span class="n">labels</span><span class="p">,</span>
@@ -906,6 +918,7 @@ enhancing the efficiency and accuracy of project evaluation.</p>
                     <span class="c1"># Decode</span>
                     <span class="n">outputs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">decoder</span><span class="p">(</span>
                         <span class="n">input_ids</span><span class="o">=</span><span class="n">decoder_input_ids</span><span class="p">,</span>
+                        <span class="n">attention_mask</span><span class="o">=</span><span class="n">mask</span><span class="p">,</span>
                         <span class="n">encoder_hidden_states</span><span class="o">=</span><span class="n">embeddings</span><span class="p">,</span>
                     <span class="p">)</span>
 
@@ -1066,8 +1079,7 @@ enhancing the efficiency and accuracy of project evaluation.</p>
 
           <details class="quote">
             <summary>Source code in <code>train_llm.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 74</span>
-<span class="normal"> 75</span>
+            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 75</span>
 <span class="normal"> 76</span>
 <span class="normal"> 77</span>
 <span class="normal"> 78</span>
@@ -1304,8 +1316,6 @@ enhancing the efficiency and accuracy of project evaluation.</p>
 
     <span class="bp">self</span><span class="o">.</span><span class="n">tokenizer</span> <span class="o">=</span> <span class="n">DonutProcessor</span><span class="o">.</span><span class="n">from_pretrained</span><span class="p">(</span>
         <span class="n">args</span><span class="o">.</span><span class="n">model_name_or_path</span><span class="p">,</span>
-        <span class="n">use_fast</span><span class="o">=</span><span class="ow">not</span> <span class="n">args</span><span class="o">.</span><span class="n">use_slow_tokenizer</span><span class="p">,</span>
-        <span class="n">trust_remote_code</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">trust_remote_code</span><span class="p">,</span>
     <span class="p">)</span>
 
     <span class="n">model</span> <span class="o">=</span> <span class="n">VisionEncoderDecoderModel</span><span class="o">.</span><span class="n">from_pretrained</span><span class="p">(</span>
@@ -1314,6 +1324,12 @@ enhancing the efficiency and accuracy of project evaluation.</p>
         <span class="n">low_cpu_mem_usage</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">low_cpu_mem_usage</span><span class="p">,</span>
         <span class="n">trust_remote_code</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">trust_remote_code</span><span class="p">,</span>
     <span class="p">)</span>
+
+    <span class="n">processor</span> <span class="o">=</span> <span class="n">DonutProcessor</span><span class="o">.</span><span class="n">from_pretrained</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">model_name_or_path</span><span class="p">)</span>
+    <span class="n">model</span> <span class="o">=</span> <span class="n">VisionEncoderDecoderModel</span><span class="o">.</span><span class="n">from_pretrained</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">model_name_or_path</span><span class="p">)</span>
+    <span class="n">model</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">accelerator</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
+
+    <span class="n">train_dataset</span> <span class="o">=</span> <span class="n">PDFDocumentDataset</span><span class="p">(</span><span class="o">**</span><span class="n">args</span><span class="o">.</span><span class="n">data_kwargs</span><span class="p">,</span> <span class="n">processor</span> <span class="o">=</span> <span class="n">processor</span><span class="p">,</span> <span class="n">model</span> <span class="o">=</span> <span class="n">model</span><span class="p">)</span>
 
     <span class="c1"># DataLoaders creation:</span>
     <span class="n">train_dataloader</span> <span class="o">=</span> <span class="n">DataLoader</span><span class="p">(</span>
@@ -1398,10 +1414,7 @@ enhancing the efficiency and accuracy of project evaluation.</p>
     <span class="c1"># The trackers initializes automatically on the main process.</span>
     <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">with_tracking</span><span class="p">:</span>
         <span class="n">experiment_config</span> <span class="o">=</span> <span class="nb">vars</span><span class="p">(</span><span class="n">args</span><span class="p">)</span>
-        <span class="c1"># TensorBoard cannot log Enums, need the raw value</span>
-        <span class="n">experiment_config</span><span class="p">[</span><span class="s2">&quot;lr_scheduler_type&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">experiment_config</span><span class="p">[</span>
-            <span class="s2">&quot;lr_scheduler_type&quot;</span>
-        <span class="p">]</span><span class="o">.</span><span class="n">value</span>
+
         <span class="bp">self</span><span class="o">.</span><span class="n">accelerator</span><span class="o">.</span><span class="n">init_trackers</span><span class="p">(</span><span class="s2">&quot;clm_no_trainer&quot;</span><span class="p">,</span> <span class="n">experiment_config</span><span class="p">)</span>
 
     <span class="c1"># Train!</span>
@@ -1429,8 +1442,6 @@ enhancing the efficiency and accuracy of project evaluation.</p>
         <span class="nb">range</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">max_train_steps</span><span class="p">),</span>
         <span class="n">disable</span><span class="o">=</span><span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">accelerator</span><span class="o">.</span><span class="n">is_local_main_process</span><span class="p">,</span>
     <span class="p">)</span>
-    <span class="bp">self</span><span class="o">.</span><span class="n">completed_steps</span> <span class="o">=</span> <span class="mi">0</span>
-    <span class="bp">self</span><span class="o">.</span><span class="n">starting_epoch</span> <span class="o">=</span> <span class="mi">0</span>
 
     <span class="bp">self</span><span class="o">.</span><span class="n">args</span> <span class="o">=</span> <span class="n">args</span>
 </code></pre></div></td></tr></table></div>
@@ -1672,7 +1683,11 @@ enhancing the efficiency and accuracy of project evaluation.</p>
 <span class="normal">464</span>
 <span class="normal">465</span>
 <span class="normal">466</span>
-<span class="normal">467</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">train</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="normal">467</span>
+<span class="normal">468</span>
+<span class="normal">469</span>
+<span class="normal">470</span>
+<span class="normal">471</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">train</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Executes the training process for the causal language modeling task.</span>
 
@@ -1684,6 +1699,9 @@ enhancing the efficiency and accuracy of project evaluation.</p>
 <span class="sd">    - Performing checkpointing based on specified intervals.</span>
 <span class="sd">    - Logging training progress and metrics.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">completed_steps</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">starting_epoch</span> <span class="o">=</span> <span class="mi">0</span>
     <span class="c1"># Potentially load in the weights and states from a previous save</span>
     <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">args</span><span class="o">.</span><span class="n">resume_from_checkpoint</span><span class="p">:</span>
         <span class="k">if</span> <span class="p">(</span>
@@ -1743,7 +1761,7 @@ enhancing the efficiency and accuracy of project evaluation.</p>
         <span class="k">for</span> <span class="n">step</span><span class="p">,</span> <span class="n">batch</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">active_dataloader</span><span class="p">):</span>
             <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">accelerator</span><span class="o">.</span><span class="n">accumulate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">):</span>
                 <span class="c1"># Predict the logits and compute loss</span>
-                <span class="n">embeddings</span><span class="p">,</span> <span class="n">labels</span> <span class="o">=</span> <span class="n">batch</span>
+                <span class="n">embeddings</span><span class="p">,</span> <span class="n">labels</span><span class="p">,</span> <span class="n">mask</span> <span class="o">=</span> <span class="n">batch</span><span class="p">[</span><span class="s1">&#39;embeddings&#39;</span><span class="p">],</span> <span class="n">batch</span><span class="p">[</span><span class="s1">&#39;labels&#39;</span><span class="p">],</span> <span class="n">batch</span><span class="p">[</span><span class="s1">&#39;attn_mask&#39;</span><span class="p">]</span>
 
                 <span class="n">decoder_input_ids</span> <span class="o">=</span> <span class="n">shift_tokens_right</span><span class="p">(</span>
                     <span class="n">labels</span><span class="p">,</span>
@@ -1754,6 +1772,7 @@ enhancing the efficiency and accuracy of project evaluation.</p>
                 <span class="c1"># Decode</span>
                 <span class="n">outputs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">decoder</span><span class="p">(</span>
                     <span class="n">input_ids</span><span class="o">=</span><span class="n">decoder_input_ids</span><span class="p">,</span>
+                    <span class="n">attention_mask</span><span class="o">=</span><span class="n">mask</span><span class="p">,</span>
                     <span class="n">encoder_hidden_states</span><span class="o">=</span><span class="n">embeddings</span><span class="p">,</span>
                 <span class="p">)</span>
 

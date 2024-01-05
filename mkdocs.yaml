@@ -15,6 +15,9 @@ nav:
     - trainers/vae_trainer.md
   - RAG: 
     - RAG.md
+  - Data:
+    - dataset/pdd_dataset.md
+    - dataset/series_dataset.md
 
 theme: readthedocs
 
