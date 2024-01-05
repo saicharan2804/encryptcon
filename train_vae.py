@@ -16,7 +16,7 @@ from transformers import get_scheduler
 logger = get_logger(__name__)
 
 
-class Trainer:
+class VaeTrainer:
     def __init__(self, args):
 
         # Initialize the accelerator. We will let the accelerator handle device placement for us in this example.
